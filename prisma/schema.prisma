@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int            @id @unique @default(autoincrement())
+  username     String         @unique
+  email        String         @unique
+  firstName    String
+  lastName     String?
+  password     String
+  avatar       String?        @default("https://icons.veryicon.com/png/o/miscellaneous/standard/avatar-15.png")
+  ChatRoomUser ChatRoomUser[]
+  messages     Message[]
+  chatRooms    ChatRoom[]     @relation("UsersInChatRoom")
+}
+
+enum MessageType{
+    TEXT
+    FILE
+  }
+
+model Message {
+  id         String   @id @default(uuid())
+  content    String
+  type       MessageType @default(TEXT)
+  createdAt  DateTime @default(now())
+  userId     Int
+  ChatRoomId String
+  ChatRoom   ChatRoom @relation(fields: [ChatRoomId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model ChatRoom {
+  id           String         @id @default(uuid())
+  name         String?
+  isGroup      Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  ChatRoomUser ChatRoomUser[]
+  messages     Message[]
+  users        User[]         @relation("UsersInChatRoom")
+}
+
+model Otp {
+  id        Int      @unique @default(autoincrement())
+  otp       Int
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model ChatRoomUser {
+  ChatRoomId String
+  userId     Int
+  ChatRoom   ChatRoom @relation(fields: [ChatRoomId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@id([ChatRoomId, userId])
+}
