@@ -26,7 +26,7 @@ app.use(express.json());
 
 // MongoDB Connection
 mongoose.connect(process.env.DATABASE_URL)
-  .then(() => console.log("MongoDB Connected"))
+  .then(() => console.log("🚀 MongoDB Connected"))
   .catch(err => console.error("MongoDB error", err));
 
 // WebSocket Logic
@@ -124,5 +124,5 @@ app.use("/api/users", userRoutes);
 app.use("/api/chats", chatRoutes);
 
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
