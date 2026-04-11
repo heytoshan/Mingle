@@ -18,7 +18,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || "DJKALDJFL";
 
 app.use(cors());

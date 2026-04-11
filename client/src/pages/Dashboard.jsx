@@ -34,7 +34,7 @@ export default function Dashboard() {
   }, [messages]);
 
   const setupWebSocket = () => {
-    const socket = new WebSocket(`ws://localhost:3002`);
+    const socket = new WebSocket(`ws://localhost:3000`);
     socket.onopen = () => {
       socket.send(JSON.stringify({ type: "connect", userId: user?.id }));
     };
