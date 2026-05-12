@@ -19,10 +19,13 @@ router.get("/", authMiddleware, async (req, res) => {
           name: chatRoom.name,
           isGroup: chatRoom.isGroup,
           createdAt: chatRoom.createdAt,
-          users: chatRoom.users.map(u => ({
-            ...u.toObject(),
-            id: u._id.toString()
-          })),
+          users: chatRoom.users.map(u => {
+            if (!u) return null;
+            return {
+              ...(u.toObject ? u.toObject() : u),
+              id: (u._id || u.id)?.toString()
+            };
+          }).filter(Boolean),
         };
 
         if (chatRoom.isGroup) {
@@ -109,11 +112,14 @@ router.get("/:roomId/messages", authMiddleware, async (req, res) => {
       .sort({ createdAt: 'asc' })
       .lean();
 
-    const formattedMessages = messages.map(msg => ({
-      id: msg._id.toString(),
-      from: msg.userId.toString(),
-      content: msg.content
-    }));
+    const formattedMessages = messages.map(msg => {
+      if (!msg || !msg.userId) return null;
+      return {
+        id: msg._id.toString(),
+        from: msg.userId.toString(),
+        content: msg.content
+      };
+    }).filter(Boolean);
     res.json(formattedMessages);
   } catch (err) {
     res.status(500).json({ message: err.message });
