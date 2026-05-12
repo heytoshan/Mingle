@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
 import { Otp } from "../models/Otp.js";
+import { sendEmail } from "../utils/mail.js";
 
 const router = express.Router();
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || "DJKALDJFL";
@@ -71,9 +72,28 @@ router.post("/otp", async (req, res) => {
       { otp: otpValue, createdAt: new Date() },
       { upsert: true }
     );
-    // Mock sending email
-    console.log(`Email to ${email}: Your OTP is ${otpValue}`);
-    res.json({ message: "OTP sent" });
+
+    // Log to console so you can always see it in the terminal
+    console.log(`\n--------------------------`);
+    console.log(`OTP for ${email}: ${otpValue}`);
+    console.log(`--------------------------\n`);
+
+    // Only attempt to send email if credentials are provided
+    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      try {
+        await sendEmail({
+          email,
+          subject: "Your Chat App Verification Code",
+          message: `Your OTP is ${otpValue}`,
+          html: `<h1>Verification Code</h1><p>Your OTP for Chat App is: <strong>${otpValue}</strong></p>`,
+        });
+      } catch (mailError) {
+        console.error("Mail Error (Configuration issue):", mailError.message);
+      }
+    }
+
+    // Always return success so the user can enter the OTP from the console
+    res.json({ message: "OTP generated! Check your terminal if email doesn't arrive." });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

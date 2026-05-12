@@ -18,7 +18,6 @@ Mingle is a professional-grade, full-stack real-time chat application built usin
 ├── server/           # Express backend API
 │   └── services/     # WebSocket, Worker, and Mock Redis services
 ├── .gitignore        # Root git exclusions
-├── package.json      # Root monorepo configuration
 └── README.md         # Project documentation
 ```
 
@@ -27,8 +26,7 @@ Mingle is a professional-grade, full-stack real-time chat application built usin
 - **Frontend**: React 18, Vite, Tailwind CSS, Framer Motion, Axios.
 - **Backend**: Node.js, Express, MongoDB (Mongoose).
 - **Real-Time**: WebSockets (ws).
-- **Messaging/Queue**: Redis (Pub/Sub and Persistence).
-- **Development**: Concurrently, Nodemon.
+- **Development**: Nodemon, Vite.
 
 ## ⚙️ Getting Started
 
@@ -36,30 +34,53 @@ Mingle is a professional-grade, full-stack real-time chat application built usin
 
 - Node.js 18+
 - MongoDB instance (Local or Atlas)
-- Redis instance
 
 ### Installation & Setup
 
-1. **Install dependencies for all projects:**
+1. **Install dependencies:**
+   
+   In separate terminals, navigate to `client` and `server` folders to install dependencies:
    ```bash
-   npm run install-all
+   # For the Frontend
+   cd client
+   npm install
+
+   # For the Backend
+   cd server
+   npm install
    ```
 
 2. **Environment Variables:**
-   - Configure `.env` in `server/` with `MONGODB_URI`, `JWT_SECRET`, and `REDIS_URL`.
+   - Configure `.env` in `server/` with `MONGODB_URI` and `JWT_SECRET`.
    - Configure `.env` in `client/` if needed for API URLs.
 
 3. **Run Development Mode:**
+   
+   Start each folder separately in its own terminal window:
+
+   **Terminal 1 (Backend):**
    ```bash
+   cd server
    npm run dev
    ```
-   *This will concurrently start the backend server, the React frontend, the Redis mock service, and the background worker.*
 
-## 📜 Scripts
+   **Terminal 2 (Frontend):**
+   ```bash
+   cd client
+   npm run dev
+   ```
 
-- `npm run dev`: Starts all services concurrently.
-- `npm run install-all`: Installs dependencies across root, server, and client.
-- `npm run build`: Builds both client and server applications.
+## 📜 Available Scripts
+
+### Client (Frontend)
+- `npm run dev`: Starts the Vite development server.
+- `npm run build`: Builds the production bundle.
+- `npm run lint`: Runs ESLint check.
+- `npm run preview`: Previews the production build locally.
+
+### Server (Backend)
+- `npm run dev`: Starts the backend server using nodemon for automatic restarts.
+- `npm run start`: Starts the backend server in production mode using Node.js.
 
 ## 📄 License
 
