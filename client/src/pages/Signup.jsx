@@ -3,11 +3,13 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate, Link } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/AuthContext";
 import { Sun, Moon, MessageCircle, Eye, EyeOff, ArrowLeft } from "lucide-react";
 
 export default function Signup() {
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: "", username: "", firstName: "", lastName: "", password: "", otp: ""
   });
@@ -35,9 +37,14 @@ export default function Signup() {
     setIsLoading(true);
     const toastId = toast.loading("Creating your account...");
     try {
-      await axios.post("/api/auth/signup", formData);
-      toast.success("Account created! Please login 🎉", { id: toastId });
-      navigate("/login");
+      const res = await axios.post("/api/auth/signup", formData);
+      const { user, token } = res.data;
+      
+      // Automatically log the user in and redirect to dashboard
+      login(user, token);
+      
+      toast.success("Account created and logged in automatically! Welcome to Mingle 🎉", { id: toastId });
+      navigate("/dashboard");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to create account", { id: toastId });
     } finally {
