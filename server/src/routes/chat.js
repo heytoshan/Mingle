@@ -56,6 +56,32 @@ router.put("/:roomId", authMiddleware, async (req, res) => {
   }
 });
 
+// Create Direct Private Chat Room (DM)
+router.post("/", authMiddleware, async (req, res) => {
+  try {
+    const { targetUserId } = req.body;
+    
+    // Check if DM room already exists
+    const existingChat = await ChatRoom.findOne({
+      isGroup: false,
+      users: { $all: [req.userId, targetUserId] }
+    });
+
+    if (existingChat) {
+      return res.status(200).json(existingChat);
+    }
+
+    const chatRoom = await ChatRoom.create({
+      isGroup: false,
+      users: [req.userId, targetUserId]
+    });
+
+    res.status(201).json(chatRoom);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Create Group Chat
 router.post("/group", authMiddleware, async (req, res) => {
   try {
@@ -79,11 +105,12 @@ router.get("/:roomId/messages", authMiddleware, async (req, res) => {
   try {
     const { roomId } = req.params;
     const messages = await Message.find({ ChatRoomId: roomId })
-      .select('content userId ChatRoomId')
+      .select('_id content userId ChatRoomId')
       .sort({ createdAt: 'asc' })
       .lean();
 
     const formattedMessages = messages.map(msg => ({
+      id: msg._id.toString(),
       from: msg.userId.toString(),
       content: msg.content
     }));

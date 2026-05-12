@@ -34,17 +34,22 @@ router.put("/", authMiddleware, async (req, res) => {
 router.get("/search", authMiddleware, async (req, res) => {
   try {
     const { query } = req.query;
-    const users = await User.find({
-      $and: [
+    let filter = { _id: { $ne: req.userId } };
+
+    if (query && query.trim() !== "") {
+      filter.$and = [
+        { _id: { $ne: req.userId } },
         { 
           $or: [
             { username: { $regex: query, $options: 'i' } },
-            { firstName: { $regex: query, $options: 'i' } }
+            { firstName: { $regex: query, $options: 'i' } },
+            { lastName: { $regex: query, $options: 'i' } }
           ]
-        },
-        { _id: { $ne: req.userId } }
-      ]
-    }).select("username firstName lastName avatar");
+        }
+      ];
+    }
+
+    const users = await User.find(filter).select("username firstName lastName avatar");
     res.json(users);
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -62,6 +62,78 @@ wss.on("connection", (ws) => {
         case "message":
           handleBroadcast(data.message, data.roomId, data.from, ws);
           break;
+
+        case "edit-message": {
+          const { messageId, content, roomId } = data;
+          handleEditMessage(messageId, content, roomId);
+          break;
+        }
+
+        case "create-room": {
+          const { roomId, userIds } = data;
+          userIds.forEach(uId => {
+            const targetWs = userConnections.get(uId);
+            if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+              targetWs.send(JSON.stringify({
+                type: "new-room",
+                roomId
+              }));
+            }
+          });
+          break;
+        }
+
+        // WebRTC Signaling Handlers
+        case "call-user": {
+          const { to, offer } = data;
+          const targetWs = userConnections.get(to);
+          if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+            targetWs.send(JSON.stringify({
+              type: "incoming-call",
+              from: ws.userId,
+              offer
+            }));
+          }
+          break;
+        }
+
+        case "accept-call": {
+          const { to, answer } = data;
+          const targetWs = userConnections.get(to);
+          if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+            targetWs.send(JSON.stringify({
+              type: "call-accepted",
+              from: ws.userId,
+              answer
+            }));
+          }
+          break;
+        }
+
+        case "ice-candidate": {
+          const { to, candidate } = data;
+          const targetWs = userConnections.get(to);
+          if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+            targetWs.send(JSON.stringify({
+              type: "ice-candidate",
+              from: ws.userId,
+              candidate
+            }));
+          }
+          break;
+        }
+
+        case "hang-up": {
+          const { to } = data;
+          const targetWs = userConnections.get(to);
+          if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+            targetWs.send(JSON.stringify({
+              type: "call-hung-up",
+              from: ws.userId
+            }));
+          }
+          break;
+        }
       }
     } catch (e) {
       console.error("WS error", e);
@@ -89,6 +161,26 @@ function broadcastUsers() {
   });
 }
 
+async function handleEditMessage(messageId, content, roomId) {
+  try {
+    await Message.findByIdAndUpdate(messageId, { content });
+    
+    // Broadcast message update to all room members
+    if (rooms[roomId]) {
+      rooms[roomId].forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: "edit-message",
+            message: { id: messageId, roomId, content }
+          }));
+        }
+      });
+    }
+  } catch (err) {
+    console.error("Failed to edit message:", err);
+  }
+}
+
 async function handleBroadcast(content, roomId, from, senderWs) {
   try {
     // Save to Database directly (Bypassing Redis/Worker)
@@ -102,13 +194,13 @@ async function handleBroadcast(content, roomId, from, senderWs) {
       $push: { messages: newMessage._id }
     });
 
-    // Broadcast to room
+    // Broadcast to all clients in the room (including sender to distribute actual DB id)
     if (rooms[roomId]) {
       rooms[roomId].forEach(client => {
-        if (client !== senderWs && client.readyState === WebSocket.OPEN) {
+        if (client.readyState === WebSocket.OPEN) {
           client.send(JSON.stringify({
             type: "message",
-            message: { from, roomId, content }
+            message: { id: newMessage._id.toString(), from, roomId, content }
           }));
         }
       });
