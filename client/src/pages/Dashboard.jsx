@@ -133,10 +133,12 @@ export default function Dashboard() {
   const messagesEndRef = useRef(null);
   const activeChatRef = useRef(null);
   const wsRef = useRef(null);
+  const callStateRef = useRef("idle");
   const emojiPickerRef = useRef(null);
 
   useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
   useEffect(() => { wsRef.current = ws; }, [ws]);
+  useEffect(() => { callStateRef.current = callState; }, [callState]);
 
   // Handle outside click to close emoji picker
   useEffect(() => {
@@ -336,7 +338,7 @@ export default function Dashboard() {
 
         // ── WEBRTC SIGNALING HANDLERS ──
         case "incoming-call": {
-          if (callState !== "idle") {
+          if (callStateRef.current !== "idle") {
             // Send back direct hang-up if busy
             socket.send(JSON.stringify({ type: "hang-up", to: data.from }));
             return;
@@ -361,7 +363,7 @@ export default function Dashboard() {
         }
 
         case "call-accepted": {
-          if (pcRef.current && callState === "ringing-out") {
+          if (pcRef.current && callStateRef.current === "ringing-out") {
             await pcRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
             setCallState("connected");
             
