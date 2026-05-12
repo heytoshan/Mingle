@@ -105,13 +105,14 @@ wss.on("connection", (ws) => {
 
         // WebRTC Signaling Handlers
         case "call-user": {
-          const { to, offer } = data;
+          const { to, offer, callType } = data;
           const targetWs = userConnections.get(to);
           if (targetWs && targetWs.readyState === WebSocket.OPEN) {
             targetWs.send(JSON.stringify({
               type: "incoming-call",
               from: ws.userId,
-              offer
+              offer,
+              callType
             }));
           }
           break;

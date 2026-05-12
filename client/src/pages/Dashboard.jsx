@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -180,6 +180,73 @@ export default function Dashboard() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // 🎵 Web Audio Calling Sound Synth (Ringing and Dialing Tone generator)
+  useEffect(() => {
+    let stopAudio = null;
+
+    if (callState === "ringing-in") {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const playBeep = () => {
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc1.type = "sine";
+        osc2.type = "sine";
+        osc1.frequency.setValueAtTime(440, audioCtx.currentTime);
+        osc2.frequency.setValueAtTime(480, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.2);
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        osc1.start();
+        osc2.start();
+        osc1.stop(audioCtx.currentTime + 1.2);
+        osc2.stop(audioCtx.currentTime + 1.2);
+      };
+
+      playBeep();
+      const interval = setInterval(playBeep, 2000);
+      stopAudio = () => {
+        clearInterval(interval);
+        audioCtx.close();
+      };
+    } else if (callState === "ringing-out") {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const playDialTone = () => {
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc1.type = "sine";
+        osc2.type = "sine";
+        osc1.frequency.setValueAtTime(350, audioCtx.currentTime);
+        osc2.frequency.setValueAtTime(440, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.04, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        osc1.start();
+        osc2.start();
+        osc1.stop(audioCtx.currentTime + 1.5);
+        osc2.stop(audioCtx.currentTime + 1.5);
+      };
+
+      playDialTone();
+      const interval = setInterval(playDialTone, 4000);
+      stopAudio = () => {
+        clearInterval(interval);
+        audioCtx.close();
+      };
+    }
+
+    return () => {
+      if (stopAudio) stopAudio();
+    };
+  }, [callState]);
+
   // 🔥 WebRTC Binding: Force re-attach and play on connection state transitions
   useEffect(() => {
     if (callState === "connected") {
@@ -276,6 +343,7 @@ export default function Dashboard() {
           }
           
           setPeerId(data.from);
+          setCallType(data.callType || "video"); // Dynamically bind incoming call style (video/audio)
           // Resolve Caller Details
           try {
             const userRes = await axios.get("/api/users/search?query=");
@@ -498,6 +566,15 @@ export default function Dashboard() {
     reader.readAsDataURL(file);
   };
 
+  const activeChatPartner = useMemo(() => {
+    if (!activeChat || activeChat.isGroup) return null;
+    return activeChat.users.find((u) => {
+      const uId = (u.id || u._id)?.toString();
+      const myId = (user?.id || user?._id)?.toString();
+      return uId && myId && uId !== myId;
+    });
+  }, [activeChat, user]);
+
   // Inject clicked emoji into textarea
   const handleSelectEmoji = (emoji) => {
     setInputMessage(prev => prev + emoji);
@@ -650,7 +727,7 @@ export default function Dashboard() {
                   <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-tight">
                     {activeChat.isGroup
                       ? activeChat.name
-                      : activeChat.users.find((u) => u.id !== user?.id)?.username}
+                      : activeChatPartner?.username}
                   </h3>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {activeChat.isGroup ? `${activeChat.users.length} members` : "Direct Message"}
@@ -790,7 +867,7 @@ export default function Dashboard() {
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     onKeyDown={handleInputKeyDown}
-                    placeholder={`Write in ${activeChat.isGroup ? activeChat.name : activeChat.users.find((u) => u.id !== user?.id)?.username || ""}... (Shift+Enter for newline, ArrowUp to edit last message)`}
+                    placeholder={`Write in ${activeChat.isGroup ? activeChat.name : activeChatPartner?.username || ""}... (Shift+Enter for newline, ArrowUp to edit last message)`}
                     className="flex-1 bg-transparent border-none text-gray-900 dark:text-white outline-none resize-none max-h-32 py-1 text-sm placeholder:text-gray-400 dark:placeholder:text-gray-600"
                     style={{ height: "auto" }}
                   />
@@ -1150,10 +1227,38 @@ export default function Dashboard() {
 
   // ── WebRTC Actions Implementation ──
 
+  async function getAdaptiveMediaStream(wantVideo) {
+    let devices = [];
+    try {
+      devices = await navigator.mediaDevices.enumerateDevices();
+    } catch (e) {
+      console.warn("Failed to enumerate devices:", e);
+    }
+
+    const hasMic = devices.some(d => d.kind === "audioinput");
+    const hasCam = devices.some(d => d.kind === "videoinput");
+
+    // Fallback if list is empty (permissions not granted yet), request normally so browser prompts user
+    const constraints = {
+      audio: hasMic || devices.length === 0,
+      video: wantVideo && (hasCam || devices.length === 0)
+    };
+
+    if (!constraints.audio && !constraints.video) {
+      throw new Error("No microphone or camera hardware detected on this computer.");
+    }
+
+    return await navigator.mediaDevices.getUserMedia(constraints);
+  }
+
   async function initiateCall(type) {
     if (!activeChat || activeChat.isGroup) return;
     
-    const otherUser = activeChat.users.find(u => u.id !== user?.id && u.id !== user?.id);
+    const otherUser = activeChat.users.find(u => {
+      const uId = (u.id || u._id)?.toString();
+      const myId = (user?.id || user?._id)?.toString();
+      return uId && myId && uId !== myId;
+    });
     if (!otherUser) return;
 
     setCallType(type);
@@ -1162,10 +1267,7 @@ export default function Dashboard() {
     setCallState("ringing-out");
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: type === "video",
-        audio: true
-      });
+      const stream = await getAdaptiveMediaStream(type === "video");
       localStreamRef.current = stream;
 
       const pc = createPeerConnection(otherUser.id);
@@ -1187,13 +1289,14 @@ export default function Dashboard() {
         wsRef.current.send(JSON.stringify({
           type: "call-user",
           to: otherUser.id,
-          offer
+          offer,
+          callType: type
         }));
       }
     } catch (err) {
       console.error("WebRTC getUserMedia Error:", err);
       cleanupWebRTC();
-      toast.error("Failed to access camera/microphone.");
+      toast.error(err.message || "Failed to access camera/microphone.");
     }
   }
 
@@ -1201,10 +1304,7 @@ export default function Dashboard() {
     if (!peerId || !wsRef.current) return;
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: callType === "video",
-        audio: true
-      });
+      const stream = await getAdaptiveMediaStream(callType === "video");
       localStreamRef.current = stream;
 
       const pc = createPeerConnection(peerId);
@@ -1230,7 +1330,7 @@ export default function Dashboard() {
     } catch (err) {
       console.error("Failed to accept call WebRTC:", err);
       cleanupWebRTC();
-      toast.error("Could not activate camera/audio devices.");
+      toast.error(err.message || "Could not activate camera/audio devices.");
     }
   }
 
