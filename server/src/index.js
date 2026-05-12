@@ -235,11 +235,19 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chats", chatRoutes);
 
-// Welcome & API Gateway Health Check
+// Welcome & API Gateway Health Check with Live Mongoose Diagnostics
 app.get("/", (req, res) => {
+  const dbStates = {
+    0: "Disconnected ❌",
+    1: "Connected ✅",
+    2: "Connecting ⏳",
+    3: "Disconnecting ⏳"
+  };
+
   res.json({
     message: "Welcome to the Mingle Chat API Gateway! 🚀",
     status: "Healthy",
+    database: dbStates[mongoose.connection.readyState] || "Unknown",
     uptime: `${Math.round(process.uptime())}s`
   });
 });
