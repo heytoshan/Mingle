@@ -235,7 +235,8 @@ export default function Dashboard() {
   };
 
   const setupWebSocket = () => {
-    const socket = new WebSocket(`ws://localhost:3000`);
+    const wsUrl = import.meta.env.VITE_WS_URL || `ws://localhost:3000`;
+    const socket = new WebSocket(wsUrl);
     socket.onopen = () => {
       socket.send(JSON.stringify({ type: "connect", userId: user?.id }));
     };
