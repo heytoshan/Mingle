@@ -28,8 +28,24 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// MongoDB Connection
-mongoose.connect(process.env.DATABASE_URL)
+// MongoDB Connection with Self-healing for unescaped '@' passwords
+let dbUrl = process.env.DATABASE_URL;
+if (dbUrl && dbUrl.startsWith("mongodb+srv://")) {
+  const rest = dbUrl.substring(14);
+  const parts = rest.split("@");
+  if (parts.length > 2) {
+    const host = parts.pop();
+    const credentials = parts.join("@");
+    const colonIdx = credentials.indexOf(":");
+    if (colonIdx !== -1) {
+      const username = credentials.substring(0, colonIdx);
+      const password = credentials.substring(colonIdx + 1);
+      dbUrl = `mongodb+srv://${username}:${encodeURIComponent(password)}@${host}`;
+    }
+  }
+}
+
+mongoose.connect(dbUrl)
   .then(() => console.log("🚀 MongoDB Connected"))
   .catch(err => console.error("MongoDB error", err));
 

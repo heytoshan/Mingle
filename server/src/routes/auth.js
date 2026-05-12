@@ -29,7 +29,7 @@ router.post("/signup", async (req, res) => {
 
     await Otp.deleteOne({ _id: existingOtp._id });
 
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "30d" });
+    const token = jwt.sign({ id: user._id.toString() }, JWT_SECRET, { expiresIn: "30d" });
     res.status(201).json({ user, token });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -46,7 +46,7 @@ router.post("/login", async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "30d" });
+    const token = jwt.sign({ id: user._id.toString() }, JWT_SECRET, { expiresIn: "30d" });
     res.json({
       user: {
         id: user._id,
