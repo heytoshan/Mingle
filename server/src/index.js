@@ -219,6 +219,15 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chats", chatRoutes);
 
+// Welcome & API Gateway Health Check
+app.get("/", (req, res) => {
+  res.json({
+    message: "Welcome to the Mingle Chat API Gateway! 🚀",
+    status: "Healthy",
+    uptime: `${Math.round(process.uptime())}s`
+  });
+});
+
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
