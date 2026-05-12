@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
 import { Otp } from "../models/Otp.js";
 import { sendEmail } from "../utils/mail.js";
+import { getOtpEmailHtml } from "../utils/mailTemplate.js";
 
 const router = express.Router();
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || "DJKALDJFL";
@@ -13,8 +14,8 @@ router.post("/signup", async (req, res) => {
   try {
     const { email, username, firstName, lastName, password, otp } = req.body;
 
-    // Verify OTP
-    const existingOtp = await Otp.findOne({ email, otp });
+    // Verify OTP (ensure robust string-to-number parsing)
+    const existingOtp = await Otp.findOne({ email, otp: Number(otp) });
     if (!existingOtp) return res.status(400).json({ message: "Invalid OTP" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -74,18 +75,18 @@ router.post("/otp", async (req, res) => {
     );
 
     // Log to console so you can always see it in the terminal
-    console.log(`\n--------------------------`);
-    console.log(`OTP for ${email}: ${otpValue}`);
-    console.log(`--------------------------\n`);
+    console.log(`\n---------------------------------`);
+    console.log(`🔥 Mingle OTP for ${email}: ${otpValue}`);
+    console.log(`---------------------------------\n`);
 
     // Only attempt to send email if credentials are provided
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
       try {
         await sendEmail({
           email,
-          subject: "Your Chat App Verification Code",
-          message: `Your OTP is ${otpValue}`,
-          html: `<h1>Verification Code</h1><p>Your OTP for Chat App is: <strong>${otpValue}</strong></p>`,
+          subject: "Verify your Mingle Account",
+          message: `Your Mingle verification code is ${otpValue}. It is valid for 5 minutes.`,
+          html: getOtpEmailHtml(otpValue),
         });
       } catch (mailError) {
         console.error("Mail Error (Configuration issue):", mailError.message);
@@ -93,7 +94,7 @@ router.post("/otp", async (req, res) => {
     }
 
     // Always return success so the user can enter the OTP from the console
-    res.json({ message: "OTP generated! Check your terminal if email doesn't arrive." });
+    res.json({ message: "OTP generated successfully! Please check your email inbox (and spam folder) or check the backend terminal logs." });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
