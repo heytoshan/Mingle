@@ -90,14 +90,6 @@ export default function LandingPage() {
         <div className="absolute top-48 right-1/4 w-64 h-64 bg-MinePink/10 dark:bg-MinePink/15 rounded-full blur-3xl -z-10 animate-float-delay" />
         <div className="absolute bottom-0 left-1/4 w-56 h-56 bg-MineYellow/5 dark:bg-MineYellow/10 rounded-full blur-3xl -z-10" />
 
-        {/* Badge */}
-        <div className="animate-fade-in inline-flex items-center gap-2 px-4 py-1.5 mb-8 text-xs font-semibold text-MineBlue bg-MineBlue/10 dark:bg-MineBlue/20 border border-MineBlue/30 rounded-full">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-MineBlue opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-MineBlue"></span>
-          </span>
-          Real-time chat, reimagined for MERN
-        </div>
 
         {/* Headline */}
         <h1 className="animate-fade-in text-5xl sm:text-6xl md:text-7xl font-black leading-tight mb-6 text-gray-900 dark:text-white tracking-tight">
