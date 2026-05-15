@@ -67,6 +67,8 @@ router.post("/login", async (req, res) => {
 router.post("/otp", async (req, res) => {
   try {
     const { email } = req.body;
+    // Log attempt
+    console.log(`\n📨 Requesting OTP for: ${email}`);
     const otpValue = Math.floor(1000 + Math.random() * 9000);
     await Otp.findOneAndUpdate(
       { email },
@@ -75,12 +77,11 @@ router.post("/otp", async (req, res) => {
     );
 
     // Log to console so you can always see it in the terminal
-    console.log(`\n---------------------------------`);
     console.log(`🔥 Mingle OTP for ${email}: ${otpValue}`);
-    console.log(`---------------------------------\n`);
 
     // Only attempt to send email if credentials are provided
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      console.log(`📧 Attempting to send email via ${process.env.SMTP_HOST}...`);
       try {
         await sendEmail({
           email,
@@ -88,14 +89,21 @@ router.post("/otp", async (req, res) => {
           message: `Your Mingle verification code is ${otpValue}. It is valid for 5 minutes.`,
           html: getOtpEmailHtml(otpValue),
         });
+        console.log(`✅ OTP email sent to ${email}`);
       } catch (mailError) {
-        console.error("Mail Error (Configuration issue):", mailError.message);
+        console.error("❌ Mail Error (Configuration issue):", mailError.message);
       }
+    } else {
+      console.warn("⚠️ SMTP credentials missing in .env! Email will not be sent.");
     }
 
     // Always return success so the user can enter the OTP from the console
-    res.json({ message: "OTP generated successfully! Please check your email inbox (and spam folder) or check the backend terminal logs." });
+    res.json({ 
+      message: "OTP generated successfully! If you don't receive an email within a minute, please check your backend terminal logs for the code.",
+      otp: process.env.NODE_ENV === 'development' ? otpValue : undefined 
+    });
   } catch (err) {
+    console.error("❌ OTP Handler Error:", err.message);
     res.status(500).json({ message: err.message });
   }
 });

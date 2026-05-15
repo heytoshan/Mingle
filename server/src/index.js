@@ -1,9 +1,11 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import http from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import mongoose from "mongoose";
 import cors from "cors";
-import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 
 import authRoutes from "./routes/auth.js";
@@ -11,8 +13,6 @@ import userRoutes from "./routes/user.js";
 import chatRoutes from "./routes/chat.js";
 import { Message } from "./models/Message.js";
 import { ChatRoom } from "./models/ChatRoom.js";
-
-dotenv.config();
 
 const app = express();
 const server = http.createServer(app);

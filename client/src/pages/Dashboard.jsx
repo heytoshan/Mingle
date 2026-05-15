@@ -349,7 +349,11 @@ export default function Dashboard() {
           // Resolve Caller Details
           try {
             const userRes = await axios.get("/api/users/search?query=");
-            const caller = userRes.data.find(u => u._id === data.from || u.id === data.from);
+            const caller = userRes.data.find(u => {
+              const uId = (u.id || u._id)?.toString();
+              const fromId = data.from?.toString();
+              return uId && fromId && uId === fromId;
+            });
             setPeerUser(caller || { username: "Someone", avatar: PRESET_AVATARS[0] });
           } catch (err) {
             setPeerUser({ username: "Someone", avatar: PRESET_AVATARS[0] });
@@ -1263,8 +1267,11 @@ export default function Dashboard() {
     });
     if (!otherUser) return;
 
+    const targetId = (otherUser.id || otherUser._id)?.toString();
+    if (!targetId) return;
+
     setCallType(type);
-    setPeerId(otherUser.id);
+    setPeerId(targetId);
     setPeerUser(otherUser);
     setCallState("ringing-out");
 
@@ -1272,7 +1279,7 @@ export default function Dashboard() {
       const stream = await getAdaptiveMediaStream(type === "video");
       localStreamRef.current = stream;
 
-      const pc = createPeerConnection(otherUser.id);
+      const pc = createPeerConnection(targetId);
       
       // Add local media tracks to peer connection
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
@@ -1290,7 +1297,7 @@ export default function Dashboard() {
       if (wsRef.current) {
         wsRef.current.send(JSON.stringify({
           type: "call-user",
-          to: otherUser.id,
+          to: targetId,
           offer,
           callType: type
         }));
